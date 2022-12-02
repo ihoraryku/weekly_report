@@ -18,6 +18,7 @@ SEVENTH_DATE = (datetime.today() + timedelta(7)).strftime("%d.%m.%Y")
 DEST_DIR = rf'{PATH_CHOICE}\Недельный на {FIRST_DATE}-{SEVENTH_DATE}'
 print(f'path_choice: {PATH_CHOICE}')
 
+# src_dir_templates = r"\\10.0.26.20\Filestore_R\ASKUE\Макеты актов для Генератора отчетов\weekly_report\templates"
 src_dir_templates = r"C:\Users\ihoraryku\Downloads\weekly_report\templates"
 shutil.copytree(src_dir_templates, DEST_DIR)
 
