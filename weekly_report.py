@@ -1,7 +1,8 @@
+import os
 import shutil
 from datetime import datetime, timedelta
 import easygui
-from openpyxl import load_workbook
+from openpyxl import load_workbook, Workbook
 
 FIRST_DATE = None
 SEVENTH_DATE = None
@@ -17,13 +18,26 @@ def get_next_seven_dates():
 
 
 def copy_templates(src_dir_templates, destination):
+    # Check if the destination directory already exists
+    if os.path.exists(destination):
+        # If it exists, remove the directory and its contents
+        shutil.rmtree(destination)
+
+    # Copy the template directory to the destination
     shutil.copytree(src_dir_templates, destination)
 
 
 def process_report(source_file, destination_file, column_index, date_strings):
     dest_file = rf'{DEST_DIR}\{destination_file}'
-    book_dest = load_workbook(filename=dest_file)
-    sheet_dest = book_dest.active
+
+    if os.path.exists(dest_file):
+        # If the destination file exists, load it
+        book_dest = load_workbook(filename=dest_file)
+        sheet_dest = book_dest.active
+    else:
+        # If the destination file does not exist, create a new workbook
+        book_dest = Workbook()
+        sheet_dest = book_dest.active
 
     for i, date_str in enumerate(date_strings, start=1):
         src_file = rf'{PATH_CHOICE}\{date_str}\{source_file}'
