@@ -1,175 +1,97 @@
+# -*- coding: utf-8 -*-
 import os
 import shutil
 from datetime import datetime, timedelta
 import easygui
 from openpyxl import load_workbook, Workbook
 
-FIRST_DATE = None
-SEVENTH_DATE = None
-DEST_DIR = None
+TEMPLATES_DIR = r"C:\Users\ihoraryku\Downloads\weekly_report\templates"
 PATH_CHOICE = None  # Move PATH_CHOICE to the global scope
 
 
 def get_next_seven_dates():
-    today = datetime.today()
+    today = datetime.utcnow().date()
     date_range = [today + timedelta(days=i) for i in range(1, 8)]
     date_strings = [date.strftime("%d.%m.%Y") for date in date_range]
+    print(f"Date_strings: {date_strings}")
     return date_strings
 
 
 def copy_templates(src_dir_templates, destination):
-    # Check if the destination directory already exists
-    if os.path.exists(destination):
-        # If it exists, remove the directory and its contents
-        shutil.rmtree(destination)
+    try:
+        if os.path.exists(destination):
+            shutil.rmtree(destination)
+        shutil.copytree(src_dir_templates, destination)
+    except Exception as err:
+        print(f"Error copying templates: {err}")
 
-    # Copy the template directory to the destination
-    shutil.copytree(src_dir_templates, destination)
 
+def process_report(source_file, destination_file, column_index, date_strings, dest_dir):
+    dest_file = os.path.join(dest_dir, destination_file)
+    print(f"dest_file: {dest_file}")
 
-def process_report(source_file, destination_file, column_index, date_strings):
-    dest_file = rf'{DEST_DIR}\{destination_file}'
+    try:
+        if os.path.exists(dest_file):
+            book_dest = load_workbook(filename=dest_file)
+            sheet_dest = book_dest.active
+        else:
+            book_dest = Workbook()
+            sheet_dest = book_dest.active
 
-    if os.path.exists(dest_file):
-        # If the destination file exists, load it
-        book_dest = load_workbook(filename=dest_file)
-        sheet_dest = book_dest.active
-    else:
-        # If the destination file does not exist, create a new workbook
-        book_dest = Workbook()
-        sheet_dest = book_dest.active
+        for i, date_str in enumerate(date_strings, start=1):
+            src_file = os.path.join(PATH_CHOICE, date_str, source_file)
+            print(f"source_file: {src_file}")
+            book_src = load_workbook(filename=src_file)
+            sheet_src = book_src.active
 
-    for i, date_str in enumerate(date_strings, start=1):
-        src_file = rf'{PATH_CHOICE}\{date_str}\{source_file}'
-        book_src = load_workbook(filename=src_file)
-        sheet_src = book_src.active
+            for row in range(3, 28):
+                cell_src = sheet_src.cell(row=row, column=3)
+                sheet_dest.cell(row=row + 2, column=column_index + i, value=cell_src.value)
 
-        for row in range(3, 28):
-            cell_src = sheet_src.cell(row=row, column=3)
-            sheet_dest.cell(row=row + 2, column=column_index + i, value=cell_src.value)
+        book_dest.save(filename=dest_file)
 
-    book_dest.save(filename=dest_file)
+    except Exception as err:
+        print(f"Error processing report: {err}")
 
 
 def main():
-    global FIRST_DATE, SEVENTH_DATE, DEST_DIR, PATH_CHOICE
-
+    global PATH_CHOICE
     easygui.msgbox(
         'Вас вітає програма для автоматизованого створення щонедільного звіту для НЕК. \nОберіть необхідну теку (місяць) де зберігаються файли НЕК'
     )
     PATH_CHOICE = easygui.diropenbox()
 
-    FIRST_DATE = (datetime.today() + timedelta(1)).strftime("%d.%m.%Y")
-    SEVENTH_DATE = (datetime.today() + timedelta(7)).strftime("%d.%m.%Y")
-    DEST_DIR = rf'{PATH_CHOICE}\Недельный на {FIRST_DATE}-{SEVENTH_DATE}'
+    first_date = (datetime.utcnow().date() + timedelta(1)).strftime("%d.%m.%Y")
+    seventh_date = (datetime.utcnow().date() + timedelta(7)).strftime("%d.%m.%Y")
+    dest_dir = os.path.join(PATH_CHOICE, f'Недельный на {first_date}-{seventh_date}')
     print(f'path_choice: {PATH_CHOICE}')
-    print(f'path_choice: {DEST_DIR}')
+    print(f'dest_dir: {dest_dir}')
 
     date_strings = get_next_seven_dates()
 
-    src_dir_templates = r"C:\Users\ihoraryku\Downloads\weekly_report\templates"
-    copy_templates(src_dir_templates, DEST_DIR)
+    copy_templates(TEMPLATES_DIR, dest_dir)
 
-    create_bolgrad_solar(date_strings)
-    create_voshod_volar(date_strings)
-    create_dn_1(date_strings)
-    create_dn_2(date_strings)
-    create_eds(date_strings)
-    create_le_1(date_strings)
-    create_le_2(date_strings)
-    create_neptun_solar(date_strings)
-    create_pluton_solar(date_strings)
-    create_pr_1(date_strings)
-    create_pr_2(date_strings)
-    create_fp(date_strings)
-    create_fs(date_strings)
-    create_evda(date_strings)
+    reports = [
+        ("Bolgrad_Solar.xlsx", "Болград Солар.xlsx"),
+        ("Voshod_Solar.xlsx", "Восход Солар.xlsx"),
+        ("Dunaiskaya_SES1.xlsx", "Дунайская СЭС-1.xlsx"),
+        ("Dunaiskaya_SES2.xlsx", "Дунайская СЭС-2.xlsx"),
+        ("EDS-SMART.xlsx", "ЕДС-Смарт Энерджи.xlsx"),
+        ("Limanskaya_1.xlsx", "Лиманская Энерджи 1.xlsx"),
+        ("Limanskaya_2.xlsx", "Лиманская Энерджи 2.xlsx"),
+        ("Neptun_Solar.xlsx", "Нептун Солар.xlsx"),
+        ("Pluton_Solar.xlsx", "Плутон Солар.xlsx"),
+        ("Priozernoe_1.xlsx", "Приозерное 1.xlsx"),
+        ("Priozernoe_2.xlsx", "Приозерное 2.xlsx"),
+        ("Franko_Pivi.xlsx", "Франко Пиви.xlsx"),
+        ("Franko_Solar.xlsx", "Франко Солар.xlsx"),
+        ("Evda_Energo.xlsx", "Эвда Энерго.xlsx")
+    ]
+
+    for source_file, destination_file in reports:
+        process_report(source_file, destination_file, 2, date_strings, dest_dir)
 
     easygui.msgbox('Звіт успішно створено!')
-
-
-def create_bolgrad_solar(date_strings):
-    source_file = 'Bolgrad_Solar.xlsx'
-    destination_file = 'Болград Солар.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_voshod_volar(date_strings):
-    source_file = 'Voshod_Solar.xlsx'
-    destination_file = 'Восход Солар.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_dn_1(date_strings):
-    source_file = 'Dunaiskaya_SES1.xlsx'
-    destination_file = 'Дунайская СЭС-1.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_dn_2(date_strings):
-    source_file = 'Dunaiskaya_SES2.xlsx'
-    destination_file = 'Дунайская СЭС-2.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_eds(date_strings):
-    source_file = 'EDS-SMART.xlsx'
-    destination_file = 'ЕДС-Смарт Энерджи.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_le_1(date_strings):
-    source_file = 'Limanskaya_1.xlsx'
-    destination_file = 'Лиманская Энерджи 1.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_le_2(date_strings):
-    source_file = 'Limanskaya_2.xlsx'
-    destination_file = 'Лиманская Энерджи 2.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_neptun_solar(date_strings):
-    source_file = 'Neptun_Solar.xlsx'
-    destination_file = 'Нептун Солар.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_pluton_solar(date_strings):
-    source_file = 'Pluton_Solar.xlsx'
-    destination_file = 'Плутон Солар.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_pr_1(date_strings):
-    source_file = 'Priozernoe_1.xlsx'
-    destination_file = 'Приозерное 1.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_pr_2(date_strings):
-    source_file = 'Priozernoe_2.xlsx'
-    destination_file = 'Приозерное 2.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_fp(date_strings):
-    source_file = 'Franko_Pivi.xlsx'
-    destination_file = 'Франко Пиви.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_fs(date_strings):
-    source_file = 'Franko_Solar.xlsx'
-    destination_file = 'Франко Солар.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
-
-
-def create_evda(date_strings):
-    source_file = 'Evda_Energo.xlsx'
-    destination_file = 'Эвда Энерго.xlsx'
-    process_report(source_file, destination_file, 2, date_strings)
 
 
 if __name__ == "__main__":
